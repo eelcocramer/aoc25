@@ -6,44 +6,10 @@ import "core:log"
 import "core:os"
 import "core:strconv"
 
-/*
-highest_jolt :: proc(bank: string) -> (jolt: int) {
-	first, second: u8
-	high_pos: int
-
-	log.info("bank:", bank)
-
-	for pos := 0; pos < len(bank) - 1; pos += 1 {
-		if bank[pos] > first {
-			first = bank[pos]
-			high_pos = pos
-		}
-	}
-
-	log.info("first:", first)
-
-	for pos := high_pos + 1; pos < len(bank); pos += 1 {
-		if bank[pos] > second {
-			second = bank[pos]
-		}
-	}
-
-	log.info("second:", second)
-
-	jolt_str := fmt.aprintf("%c%c", first, second)
-	jolt, _ = strconv.parse_int(jolt_str)
-
-
-	log.info("str:", jolt_str, "jolt:", jolt)
-
-	return
-}
-*/
-
-highest_jolt :: proc(bank: string, batteries: int) -> string {
+highest_jolt :: proc(bank: string, batteries: int, allocator := context.temp_allocator) -> string {
 	high: u8
 
-	log.info("batteries:", batteries, "bank:", bank)
+	log.debug("batteries:", batteries, "bank:", bank)
 
 	if batteries == 1 {
 		for i := 0; i < len(bank); i += 1 {
@@ -52,20 +18,22 @@ highest_jolt :: proc(bank: string, batteries: int) -> string {
 			}
 		}
 
-		return fmt.aprintf("%c", high)
+		return fmt.aprintf("%c", high, allocator = allocator)
 	}
 
 	pos: int
 	for i := 0; i < len(bank) - batteries + 1; i += 1 {
-		log.info("i:", i, "b:", bank[i], "high:", high)
+		log.debug("i:", i, "b:", bank[i], "high:", high)
 		if bank[i] > high {
 			high = bank[i]
 			pos = i
 		}
 	}
 
-	jolt := fmt.aprintf("%c%s", high, highest_jolt(bank[pos + 1:], batteries - 1))
-	log.info("jolt:", jolt)
+	hj := highest_jolt(bank[pos + 1:], batteries - 1)
+	jolt := fmt.aprintf("%c%s", high, hj, allocator = allocator)
+	log.debug("jolt:", jolt)
+
 	return jolt
 }
 
@@ -83,10 +51,12 @@ main :: proc() {
 		}
 		bank := bufio.scanner_text(&scanner)
 
-		high, _ := strconv.parse_int(highest_jolt(bank, 2))
+		h := highest_jolt(bank, 2)
+		high, _ := strconv.parse_int(h)
 		p1 += high
 
-		high_u128, _ := strconv.parse_u128(highest_jolt(bank, 12))
+		h = highest_jolt(bank, 12)
+		high_u128, _ := strconv.parse_u128(h)
 		p2 += high_u128
 	}
 

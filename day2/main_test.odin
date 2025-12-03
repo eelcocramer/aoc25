@@ -21,8 +21,11 @@ part1_test :: proc(t: ^testing.T) {
 
 	ok = part1(1001)
 	testing.expect(t, ok, "1001 is an valid number")
+}
 
-	ok = part2(0)
+@(test)
+part2_test :: proc(t: ^testing.T) {
+	ok := part2(0)
 	testing.expect(t, ok, "0 is a valid number")
 
 	ok = part2(10)

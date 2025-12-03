@@ -8,17 +8,17 @@ import "core:strconv"
 import "core:strings"
 
 match :: proc(s, sub: string) -> bool {
-	log.info("a:", s[:len(sub)], "b:", sub)
+	log.debug("a:", s[:len(sub)], "b:", sub)
 	if strings.compare(s[:len(sub)], sub) != 0 {
-		log.info("ret2 false")
+		log.debug("ret2 false")
 		return false
 	}
 	if len(s) == len(sub) {
-		log.info("ret2 true")
+		log.debug("ret2 true")
 		return true
 	}
 	if len(s[len(sub):]) < len(sub) {
-		log.info("ret3 false")
+		log.debug("ret3 false")
 		return false
 	}
 	return match(s[len(sub):], sub)
@@ -36,15 +36,17 @@ check :: proc(s: string, i: int) -> bool {
 
 part2 :: proc(num: u64) -> bool {
 	s := fmt.aprintf("%d", num)
-	log.info("num:", s)
+	defer delete(s)
+
+	log.debug("num:", s)
 
 	return check(s, 1)
 
 	/*
 	for i := 1; i <= len(s) / 2 && len(s) % i == 0; i += 1 {
-		log.info("s[i:]", s[i:], "s[0:i]", s[0:i])
+		log.debug("s[i:]", s[i:], "s[0:i]", s[0:i])
 		if (!match(s[i:], s[0:i])) {
-			log.info("match")
+			log.debug("match")
 			return true
 		}
 	}
@@ -55,6 +57,7 @@ part2 :: proc(num: u64) -> bool {
 
 part1 :: proc(num: u64) -> bool {
 	s := fmt.aprintf("%d", num)
+	defer delete(s)
 
 	if len(s) % 2 != 1 {
 		m := len(s) / 2
