@@ -41,18 +41,6 @@ part2 :: proc(num: u64) -> bool {
 	log.debug("num:", s)
 
 	return check(s, 1)
-
-	/*
-	for i := 1; i <= len(s) / 2 && len(s) % i == 0; i += 1 {
-		log.debug("s[i:]", s[i:], "s[0:i]", s[0:i])
-		if (!match(s[i:], s[0:i])) {
-			log.debug("match")
-			return true
-		}
-	}
-
-	return false
-	*/
 }
 
 part1 :: proc(num: u64) -> bool {
