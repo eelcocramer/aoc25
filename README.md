@@ -11,14 +11,14 @@ To solve the puzzles use:
 cat puzzle.txt | odin run .
 ```
 
-To run the simple example use:
+To run the simple example issue:
 
 ```bash
 cat test.txt | odin run .
 ```
 
-Some days have units tests.
-To run use:
+Some days have unit tests.
+To run issue:
 
 ```bash
 odin test .
