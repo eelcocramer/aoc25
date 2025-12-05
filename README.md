@@ -9,6 +9,9 @@ To solve the puzzles use:
 
 ```bash
 cat puzzle.txt | odin run .
+# or with debug logging enabled
+cat puzzle.txt | odin run . -define:LOG_LEVEL=debug
+cat puzzle.txt | odin run . -define:VERBOSE=true
 ```
 
 To run the simple example issue:
