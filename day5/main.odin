@@ -4,6 +4,8 @@ import "core:bufio"
 import "core:fmt"
 import "core:log"
 import "core:os"
+import "core:slice"
+import "core:sort"
 import "core:strconv"
 import "core:strings"
 
@@ -43,6 +45,26 @@ Range :: struct {
 	high: u64,
 }
 
+range_size :: proc(r: Range, start: u64) -> (result: u128, high: u64) {
+	low := start
+	if low < r.low {
+		low = r.low
+	}
+	if low > r.high {
+		result = 0
+		high = start
+	} else {
+		result = u128(r.high) - u128(low) + 1
+		high = r.high + 1
+	}
+
+	return
+}
+
+sort_ranges :: proc(i, j: Range) -> bool {
+	return i.low < j.low
+}
+
 in_range :: proc(id: u64, r: Range) -> bool {
 	return id >= r.low && id <= r.high
 }
@@ -59,7 +81,7 @@ main :: proc() {
 	stdin := os.stream_from_handle(os.stdin)
 	bufio.scanner_init(&scanner, stdin, context.temp_allocator)
 
-	p1: u128
+	p1: u64
 	p2: u128
 
 	proc_ranges := true
@@ -98,6 +120,15 @@ main :: proc() {
 				break
 			}
 		}
+	}
+
+	slice.sort_by(ranges[:], sort_ranges)
+	start: u64
+
+	for e in ranges {
+		count: u128
+		count, start = range_size(e, start)
+		p2 += count
 	}
 
 	fmt.printf("puzzle 1 = %d\n", p1)
