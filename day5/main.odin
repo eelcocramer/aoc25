@@ -70,19 +70,38 @@ in_range :: proc(id: u64, r: Range) -> bool {
 }
 
 parse_range :: proc(line: string) -> (r: Range) {
+	log.debug("parsing range", "line:", line)
 	low, _, high := strings.partition(line, "-")
 	r.low, _ = strconv.parse_u64(low)
 	r.high, _ = strconv.parse_u64(high)
 	return
 }
 
+VERBOSE :: #config(VERBOSE, false)
+LOG_LEVEL_DEFAULT: string : "debug" when VERBOSE else "info"
+LOG_LEVEL: string : #config(LOG_LEVEL, LOG_LEVEL_DEFAULT)
+
+get_log_level :: #force_inline proc() -> log.Level {
+	when LOG_LEVEL == "debug" {return .Debug} else when LOG_LEVEL == "info" {return .Info} else when LOG_LEVEL == "warning" {return .Warning} else when LOG_LEVEL == "error" {return .Error} else when LOG_LEVEL == "fatal" {return .Fatal} else {
+		#panic(
+			"Unknown `ODIN_TEST_LOG_LEVEL`: \"" +
+			LOG_LEVEL +
+			"\", possible levels are: \"debug\", \"info\", \"warning\", \"error\", or \"fatal\".",
+		)
+	}
+}
+
 main :: proc() {
+	context.logger = log.create_console_logger()
+	context.logger.lowest_level = get_log_level()
 	scanner: bufio.Scanner
 	stdin := os.stream_from_handle(os.stdin)
 	bufio.scanner_init(&scanner, stdin, context.temp_allocator)
 
 	p1: u64
 	p2: u128
+
+	log.info("running puzzle")
 
 	proc_ranges := true
 
