@@ -3,9 +3,7 @@ package main
 import "core:bufio"
 import "core:bytes"
 import "core:fmt"
-import "core:log"
 import "core:os"
-import "core:strconv"
 
 is_roll :: proc(diagram: ^[dynamic][]byte, x, y: int) -> bool {
 	if x < 0 || x >= len(diagram) {

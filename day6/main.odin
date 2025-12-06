@@ -5,46 +5,8 @@ import "core:fmt"
 import "core:log"
 import "core:os"
 import "core:slice"
-import "core:sort"
 import "core:strconv"
 import "core:strings"
-
-Range :: struct {
-	low:  u64,
-	high: u64,
-}
-
-range_size :: proc(r: Range, start: u64) -> (result: u128, high: u64) {
-	low := start
-	if low < r.low {
-		low = r.low
-	}
-	if low > r.high {
-		result = 0
-		high = start
-	} else {
-		result = u128(r.high) - u128(low) + 1
-		high = r.high + 1
-	}
-
-	return
-}
-
-sort_ranges :: proc(i, j: Range) -> bool {
-	return i.low < j.low
-}
-
-in_range :: proc(id: u64, r: Range) -> bool {
-	return id >= r.low && id <= r.high
-}
-
-parse_range :: proc(line: string) -> (r: Range) {
-	log.debug("parsing range", "line:", line)
-	low, _, high := strings.partition(line, "-")
-	r.low, _ = strconv.parse_u64(low)
-	r.high, _ = strconv.parse_u64(high)
-	return
-}
 
 VERBOSE :: #config(VERBOSE, false)
 LOG_LEVEL_DEFAULT: string : "debug" when VERBOSE else "info"
@@ -67,18 +29,18 @@ main :: proc() {
 	stdin := os.stream_from_handle(os.stdin)
 	bufio.scanner_init(&scanner, stdin, context.temp_allocator)
 
-	p1: u64
+	p1: u128
 	p2: u128
 
 	log.info("running puzzle")
 
 	proc_ranges := true
 
-	ranges: [dynamic]Range
-	defer delete(ranges)
+	worksheet: [dynamic][dynamic]u128
+	defer delete(worksheet)
 
-	available: [dynamic]u64
-	defer delete(available)
+	operators: [dynamic]u8
+	defer delete(operators)
 
 	for {
 		if !bufio.scanner_scan(&scanner) {
@@ -86,37 +48,47 @@ main :: proc() {
 		}
 		line := bufio.scanner_text(&scanner)
 
-		if line == "" {
-			proc_ranges = false
-		} else if proc_ranges {
-			append_elem(&ranges, parse_range(line))
+		if line[0] == '*' || line[0] == '+' {
+			for str in strings.split_iterator(&line, " ") {
+				if len(str) == 0 {
+					continue
+				}
+				append_elem(&operators, str[0])
+			}
 		} else {
-			i, _ := strconv.parse_u64(line)
-			append_elem(&available, i)
+			nums: [dynamic]u128
+			for str in strings.split_iterator(&line, " ") {
+				if len(str) == 0 {
+					continue
+				}
+				num, _ := strconv.parse_u128(str)
+				append_elem(&nums, num)
+			}
+			append_elem(&worksheet, nums)
 		}
-
 	}
 
 	if err := bufio.scanner_error(&scanner); err != nil {
 		fmt.eprintln("error scanning input: %v", err)
 	}
 
-	for i in available {
-		for r in ranges {
-			if in_range(i, r) {
-				p1 += 1
-				break
+	log.debug("worksheet:", worksheet)
+	log.debug("operators:", operators)
+
+	for i := 0; i < len(worksheet[0]); i += 1 {
+		sum := worksheet[0][i]
+		for j := 1; j < len(worksheet); j += 1 {
+			log.debug("val:", worksheet[j][i])
+			if operators[i] == '+' {
+				log.debug("+")
+				sum += worksheet[j][i]
+			} else {
+				log.debug("*")
+				sum *= worksheet[j][i]
 			}
 		}
-	}
-
-	slice.sort_by(ranges[:], sort_ranges)
-	start: u64
-
-	for e in ranges {
-		count: u128
-		count, start = range_size(e, start)
-		p2 += count
+		log.debug("sum:", sum)
+		p1 += sum
 	}
 
 	fmt.printf("puzzle 1 = %d\n", p1)
