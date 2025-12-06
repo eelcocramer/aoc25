@@ -74,6 +74,17 @@ solve_p1 :: proc(input: [dynamic][]byte) -> (p1: u128) {
 	return
 }
 
+calc :: proc(operator: u8, input: [dynamic]u128) -> (outcome: u128) {
+	outcome = input[0]
+	for n := 1; n < len(input); n += 1 {
+		if operator == '+' {
+			outcome += input[n]
+		} else {
+			outcome *= input[n]
+		}
+	}
+	return
+}
 
 solve_p2 :: proc(input: [dynamic][]byte) -> (p2: u128) {
 	operators: [dynamic]u8
@@ -104,16 +115,7 @@ solve_p2 :: proc(input: [dynamic][]byte) -> (p2: u128) {
 		}
 		if len(num) == 0 {
 			log.debug("calc here:", rune(operators[op_idx]), nums)
-			sum := nums[0]
-			for n := 1; n < len(nums); n += 1 {
-				if operators[op_idx] == '+' {
-					sum += nums[n]
-				} else {
-					sum *= nums[n]
-				}
-			}
-			log.debug("sum:", sum)
-			p2 += sum
+			p2 += calc(operators[op_idx], nums)
 			delete(nums)
 			nums = make([dynamic]u128, 0)
 			op_idx -= 1
@@ -123,18 +125,8 @@ solve_p2 :: proc(input: [dynamic][]byte) -> (p2: u128) {
 		}
 	}
 	log.debug("calc here:", rune(operators[op_idx]), nums)
-	sum := nums[0]
-	for n := 1; n < len(nums); n += 1 {
-		if operators[op_idx] == '+' {
-			sum += nums[n]
-		} else {
-			sum *= nums[n]
-		}
-	}
-	log.debug("sum:", sum)
-	p2 += sum
+	p2 += calc(operators[op_idx], nums)
 	delete(nums)
-	nums = make([dynamic]u128, 0)
 	op_idx -= 1
 	return
 }
