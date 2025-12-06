@@ -1,6 +1,7 @@
 package main
 
 import "core:bufio"
+import "core:bytes"
 import "core:fmt"
 import "core:log"
 import "core:os"
@@ -22,32 +23,15 @@ get_log_level :: #force_inline proc() -> log.Level {
 	}
 }
 
-main :: proc() {
-	context.logger = log.create_console_logger()
-	context.logger.lowest_level = get_log_level()
-	scanner: bufio.Scanner
-	stdin := os.stream_from_handle(os.stdin)
-	bufio.scanner_init(&scanner, stdin, context.temp_allocator)
-
-	p1: u128
-	p2: u128
-
-	log.info("running puzzle")
-
-	proc_ranges := true
-
+solve_p1 :: proc(input: [dynamic][]byte) -> (p1: u128) {
 	worksheet: [dynamic][dynamic]u128
 	defer delete(worksheet)
 
 	operators: [dynamic]u8
 	defer delete(operators)
 
-	for {
-		if !bufio.scanner_scan(&scanner) {
-			break
-		}
-		line := bufio.scanner_text(&scanner)
-
+	for buf in input {
+		line := string(buf)
 		if line[0] == '*' || line[0] == '+' {
 			for str in strings.split_iterator(&line, " ") {
 				if len(str) == 0 {
@@ -68,10 +52,6 @@ main :: proc() {
 		}
 	}
 
-	if err := bufio.scanner_error(&scanner); err != nil {
-		fmt.eprintln("error scanning input: %v", err)
-	}
-
 	log.debug("worksheet:", worksheet)
 	log.debug("operators:", operators)
 
@@ -90,6 +70,105 @@ main :: proc() {
 		log.debug("sum:", sum)
 		p1 += sum
 	}
+
+	return
+}
+
+
+solve_p2 :: proc(input: [dynamic][]byte) -> (p2: u128) {
+	operators: [dynamic]u8
+	defer delete(operators)
+
+	line := string(input[len(input) - 1])
+	if line[0] == '*' || line[0] == '+' {
+		for str in strings.split_iterator(&line, " ") {
+			if len(str) == 0 {
+				continue
+			}
+			append_elem(&operators, str[0])
+		}
+	}
+
+	log.debug("p2_ops:", operators[:])
+
+	nums: [dynamic]u128
+	op_idx := len(operators) - 1
+
+	for i := len(input[0]) - 1; i >= 0; i -= 1 {
+		num: [dynamic]byte
+		defer delete(num)
+		for j := 0; j < len(input) - 1; j += 1 {
+			if !bytes.is_space(rune(input[j][i])) {
+				append(&num, input[j][i])
+			}
+		}
+		if len(num) == 0 {
+			log.debug("calc here:", rune(operators[op_idx]), nums)
+			sum := nums[0]
+			for n := 1; n < len(nums); n += 1 {
+				if operators[op_idx] == '+' {
+					sum += nums[n]
+				} else {
+					sum *= nums[n]
+				}
+			}
+			log.debug("sum:", sum)
+			p2 += sum
+			delete(nums)
+			nums = make([dynamic]u128, 0)
+			op_idx -= 1
+		} else {
+			parsed, _ := strconv.parse_u128(string(num[:]))
+			append_elem(&nums, parsed)
+		}
+	}
+	log.debug("calc here:", rune(operators[op_idx]), nums)
+	sum := nums[0]
+	for n := 1; n < len(nums); n += 1 {
+		if operators[op_idx] == '+' {
+			sum += nums[n]
+		} else {
+			sum *= nums[n]
+		}
+	}
+	log.debug("sum:", sum)
+	p2 += sum
+	delete(nums)
+	nums = make([dynamic]u128, 0)
+	op_idx -= 1
+	return
+}
+
+main :: proc() {
+	context.logger = log.create_console_logger()
+	context.logger.lowest_level = get_log_level()
+	scanner: bufio.Scanner
+	stdin := os.stream_from_handle(os.stdin)
+	bufio.scanner_init(&scanner, stdin, context.temp_allocator)
+
+	p1: u128
+	p2: u128
+
+	log.info("running puzzle")
+
+	worksheet: [dynamic][]byte
+	defer delete(worksheet)
+
+	for {
+		if !bufio.scanner_scan(&scanner) {
+			break
+		}
+		row := bufio.scanner_bytes(&scanner)
+		append_elem(&worksheet, bytes.clone(row))
+	}
+
+	if err := bufio.scanner_error(&scanner); err != nil {
+		fmt.eprintln("error scanning input: %v", err)
+	}
+
+	p1 = solve_p1(worksheet)
+	p2 = solve_p2(worksheet)
+
 
 	fmt.printf("puzzle 1 = %d\n", p1)
 	fmt.printf("puzzle 2 = %d\n", p2)
