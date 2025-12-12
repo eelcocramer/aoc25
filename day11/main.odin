@@ -2,13 +2,10 @@
 package main
 
 import "core:bufio"
-import "core:bytes"
 import "core:fmt"
 import "core:log"
-import "core:math/linalg"
 import "core:os"
 import "core:slice"
-import "core:strconv"
 import "core:strings"
 
 VERBOSE :: #config(VERBOSE, false)
@@ -27,23 +24,56 @@ get_log_level :: #force_inline proc() -> log.Level {
 	}
 }
 
-Output :: struct {
-	id:  string,
+solve2 :: proc(
+	key, target: string,
+	visited: []string,
+	paths: ^map[string][]string,
+	cache: ^map[string]i128,
+) -> (
 	sol: i128,
+) {
+	log.debug("key:", key, "visited:", visited, "paths[key]:", paths[key])
+
+	//good := slice.contains(visited, "dac") && slice.contains(visited, "fft")
+
+	if key == target {
+		//log.debug("dac:", slice.contains(visited, "dac"), "fft:", slice.contains(visited, "fft"))
+		//if good {
+		return 1
+		//} else {
+		//	return 0
+		//}
+	}
+
+	if s, ok := cache[key]; ok {
+		return s
+	}
+
+	v := slice.clone_to_dynamic(visited)
+	append_elem(&v, key)
+	for k in paths[key] {
+		if !slice.contains(v[:], k) {
+			sol += solve2(k, target, v[:], paths, cache)
+		}
+	}
+	delete(v)
+	cache[key] = sol
+	return sol
 }
 
-solve1 :: proc(key: string, paths: ^map[string][]Output) -> (sol: i128) {
-	for &o in paths[key] {
-		log.debug(o)
-		if o.sol < 0 {
-			if o.id == "out" {
-				o.sol = 1
-			} else {
-				o.sol = solve1(o.id, paths)
-			}
-		}
-		sol += o.sol
+solve1 :: proc(key: string, visited: []string, paths: ^map[string][]string) -> (sol: i128) {
+	if key == "out" {
+		return 1
 	}
+
+	v := slice.clone_to_dynamic(visited)
+	append_elem(&v, key)
+	for k in paths[key] {
+		if !slice.contains(v[:], k) {
+			sol += solve1(k, v[:], paths)
+		}
+	}
+	delete(v)
 	return sol
 }
 
@@ -54,11 +84,9 @@ main :: proc() {
 	stdin := os.stream_from_handle(os.stdin)
 	bufio.scanner_init(&scanner, stdin, context.temp_allocator)
 
-	p2: u128
-
 	log.info("running puzzle")
 
-	paths: map[string][]Output
+	paths: map[string][]string
 	defer delete(paths)
 
 	for {
@@ -68,9 +96,9 @@ main :: proc() {
 		line := bufio.scanner_text(&scanner)
 
 		tokens, _ := strings.split(line, " ")
-		outputs: [dynamic]Output
+		outputs: [dynamic]string
 		for s in tokens[1:] {
-			append_elem(&outputs, Output{id = strings.clone(s), sol = -1})
+			append_elem(&outputs, strings.clone(s))
 		}
 		paths[strings.clone(tokens[0][0:3])] = slice.clone(outputs[:])
 		delete(outputs)
@@ -80,12 +108,28 @@ main :: proc() {
 		fmt.eprintln("error scanning input: %v", err)
 	}
 
-	for k, _ in paths {
-		log.debug(k)
+
+	log.debug(paths)
+
+	cache: map[string]i128
+	sol2 := solve2("svr", "fft", []string{}, &paths, &cache)
+	if sol2 == 0 {
+		clear_map(&cache)
+		sol2 = solve2("svr", "dac", []string{}, &paths, &cache)
+		clear_map(&cache)
+		sol2 *= solve2("dac", "fft", []string{}, &paths, &cache)
+		clear_map(&cache)
+		sol2 *= solve2("fft", "out", []string{}, &paths, &cache)
+	} else {
+		clear_map(&cache)
+		sol2 *= solve2("fft", "dac", []string{}, &paths, &cache)
+		clear_map(&cache)
+		sol2 *= solve2("dac", "out", []string{}, &paths, &cache)
 	}
 
-	fmt.printf("puzzle 1 = %d\n", solve1("you", &paths))
-	fmt.printf("puzzle 2 = %d\n", p2)
+	fmt.printf("puzzle 1 = %d\n", solve1("you", []string{}, &paths))
+	fmt.printf("puzzle 2 = %d\n", sol2)
+
 
 	free_all(context.temp_allocator)
 }
