@@ -45,128 +45,48 @@ Rectangle :: struct {
 	size: u128,
 }
 
-/*
-minmax :: proc(
-	x: int,
-	last_x: f64,
-	dir: int,
-	vectors: []linalg.Vector2f64,
-) -> (
-	found: bool,
-	min: f64,
-	max: f64,
-) {
-	log.debug("minmax")
-	min = math.max(f64)
-	max = -1
-	for i := x; i < len(vectors) && i >= 0; i += dir {
-		if vectors[i].x > f64(last_x) {
-			return
-		} else if vectors[i].x == f64(x) {
-			found = true
-			if min > vectors[i].y {
-				min = vectors[i].y
-			}
+outer_lines :: proc(vectors: [dynamic]linalg.Vector2f64) -> []Rectangle {
+	rectangles: [dynamic]Rectangle
+	defer delete(rectangles)
 
-			if max < vectors[i].y {
-				max = vectors[i].y
-			}
+	y_by_x: map[f64][dynamic]f64
+	defer delete(y_by_x)
+
+	for v in vectors {
+		if _, ok := y_by_x[v.x]; !ok {
+			y_by_x[v.x] = make([dynamic]f64)
+		}
+		append_elem(&y_by_x[v.x], v.y)
+	}
+
+	min, max: f64
+	for i := 0; i < len(vectors); i += 1 {
+		v := vectors[i]
+
+		yv := y_by_x[v.x]
+		if len(yv) > 0 {
+			min = yv[0]
+			max = yv[len(yv) - 1]
 		}
 
-	}
-	return
-}
-*/
+		append_elem(&rectangles, Rectangle{a = [2]f64{v.x, min}, b = [2]f64{v.x, max}})
 
-inbounds :: proc(
-	r: Rectangle,
-	vectors: [dynamic]linalg.Vector2f64,
-	y_by_x: map[f64][dynamic]f64,
-) -> bool {
-	top, bottom: linalg.Vector2f64
-	if r.a.x < r.b.x {
-		top.x = r.a.x
-		bottom.x = r.b.x
-	} else {
-		top.x = r.b.x
-		bottom.x = r.a.x
-	}
+		for j := i + 1; j < len(vectors); j += 1 {
+			w := vectors[j]
 
-	if r.a.y < r.b.y {
-		top.y = r.a.y
-		bottom.y = r.b.y
-	} else {
-		top.y = r.b.y
-		bottom.y = r.a.y
-	}
-
-	log.debug("r", r)
-	log.debug("top", top)
-	log.debug("bottom", bottom)
-
-	top_idx, bottom_idx: int
-
-	if top.x == r.a.x {
-		top_idx, _ = slice.linear_search_reverse(vectors[:], r.a)
-	} else {
-		top_idx, _ = slice.linear_search_reverse(vectors[:], r.b)
-	}
-
-	if bottom.x == r.a.x {
-		bottom_idx, _ = slice.linear_search(vectors[:], r.a)
-	} else {
-		bottom_idx, _ = slice.linear_search(vectors[:], r.b)
-	}
-
-	// found larger or eq then bottom above top
-	// found smaller or eq then top below top to bottom
-
-	fit := false
-	for j := bottom_idx; j >= 0; j -= 1 {
-		ys := y_by_x[vectors[j].x]
-		log.debug("bottom to top", vectors[j].x, ys)
-
-		larger := false
-		for y in ys {
-			if y >= bottom.y {
-				larger = true
+			yw := y_by_x[w.x]
+			for y in yw {
+				if y == min {
+					append_elem(&rectangles, Rectangle{a = [2]f64{v.x, min}, b = [2]f64{w.x, min}})
+				}
+				if y == max {
+					append_elem(&rectangles, Rectangle{a = [2]f64{v.x, max}, b = [2]f64{w.x, min}})
+				}
 			}
 		}
-
-		if vectors[j].x <= top.x && larger {
-			fit = true
-			break
-		} else {
-			continue
-		}
 	}
 
-	if !fit {
-		return false
-	}
-
-	fit = false
-	for j := top_idx; j < len(vectors); j += 1 {
-		log.debug("top to bottom")
-		ys := y_by_x[vectors[j].x]
-
-		smaller := false
-		for y in ys {
-			if y <= top.y {
-				smaller = true
-			}
-		}
-
-		//FIXME
-		if vectors[j].x >= bottom.x && smaller {
-			fit = true
-			break
-		} else {
-			continue
-		}
-	}
-
-	return fit
+	return slice.clone(rectangles[:])
 }
 
 solve :: proc(vectors: [dynamic]linalg.Vector2f64, check: bool) -> u128 {
@@ -197,18 +117,8 @@ solve :: proc(vectors: [dynamic]linalg.Vector2f64, check: bool) -> u128 {
 
 	log.debug(vectors)
 
-	y_by_x: map[f64][dynamic]f64
-	defer delete(y_by_x)
-
-	for v in vectors {
-		if _, ok := y_by_x[v.x]; !ok {
-			y_by_x[v.x] = make([dynamic]f64)
-		}
-		append_elem(&y_by_x[v.x], v.y)
-	}
-
 	for r in rectangles {
-		if inbounds(r, vectors, y_by_x) {
+		if inbounds(r, vectors, lines) {
 			log.debug("solution", r)
 			return r.size
 		}
